@@ -54,7 +54,7 @@ func commandMap(config *config) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return fmt.Errorf("the call to location-area did not succeed: %v\n", res.StatusCode)
+		return fmt.Errorf("the call to location-area did not succeed: %v", res.StatusCode)
 	}
 	var locationresponse LocationResponse
 	jsonData, err := io.ReadAll(res.Body)
@@ -78,7 +78,7 @@ func commandMap(config *config) error {
 
 func commandMapb(config *config) error {
 	if config.prevUrl == ""{
-		return errors.New("you're on the first page\n")
+		return errors.New("you're on the first page")
 	}
 
 	res, err := http.Get(config.prevUrl)
@@ -87,7 +87,7 @@ func commandMapb(config *config) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return fmt.Errorf("the call to location-area did not succeed: %v\n", res.StatusCode)
+		return fmt.Errorf("the call to location-area did not succeed: %v", res.StatusCode)
 	}
 	var locationresponse LocationResponse
 	jsonData, err := io.ReadAll(res.Body)
@@ -112,7 +112,7 @@ func commandMapb(config *config) error {
 
 
 func commandHelp(config *config) error {
-	fmt.Print("Welcome to the Pokedex!\n")
+	fmt.Print("\nWelcome to the Pokedex!\n")
 	fmt.Print("Usage:\n\n\n")
 	for _, command := range commands{
 		fmt.Printf("%s: %s\n",command.name,command.description)
