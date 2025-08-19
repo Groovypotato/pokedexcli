@@ -14,7 +14,7 @@ import (
 type cliCommand struct {
 	name string
 	description string
-	callback func(*config) error
+	callback func(*config, string) error
 }
 
 type config struct {
@@ -23,7 +23,7 @@ type config struct {
 	prevUrl string
 }
 
-type LocationResponse struct {
+type LocationAreas struct {
 	Count int
 	Next string
 	Previous string
@@ -35,6 +35,19 @@ type Location struct {
 	URL string
 }
 
+type LocationArea struct {
+	PokemonEncounters []PokemonEncounter `json:"pokemon_encounters"`
+}
+
+type PokemonEncounter struct {
+	Pokemon Pokemon `json:"pokemon"`
+}
+
+type Pokemon struct {
+	Name string `json:"name"`
+	URL string `json:"url"`
+}
+
 var commands map[string]cliCommand
 
 func cleanInput(text string) []string {
@@ -43,7 +56,7 @@ func cleanInput(text string) []string {
     return words
 }
 
-func commandMap(config *config) error {
+func commandMap(config *config, location string) error {
 	getURL := config.baseURL
 	if config.nextUrl != "" {
 		getURL = config.nextUrl
@@ -56,27 +69,27 @@ func commandMap(config *config) error {
 	if res.StatusCode > 299 {
 		return fmt.Errorf("the call to location-area did not succeed: %v", res.StatusCode)
 	}
-	var locationresponse LocationResponse
+	var locationAreas LocationAreas
 	jsonData, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
-	jsonErr := json.Unmarshal(jsonData,&locationresponse)
+	jsonErr := json.Unmarshal(jsonData,&locationAreas)
 	if jsonErr != nil {
 		return err
 	}
 
-	config.nextUrl = locationresponse.Next
-	config.prevUrl = locationresponse.Previous
+	config.nextUrl = locationAreas.Next
+	config.prevUrl = locationAreas.Previous
 
-	for _, location := range locationresponse.Results {
+	for _, location := range locationAreas.Results {
 		fmt.Println(location.Name)
 	}
 	
 	return nil
 }
 
-func commandMapb(config *config) error {
+func commandMapb(config *config, location string) error {
 	if config.prevUrl == ""{
 		return errors.New("you're on the first page")
 	}
@@ -89,7 +102,7 @@ func commandMapb(config *config) error {
 	if res.StatusCode > 299 {
 		return fmt.Errorf("the call to location-area did not succeed: %v", res.StatusCode)
 	}
-	var locationresponse LocationResponse
+	var locationresponse LocationAreas
 	jsonData, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
@@ -109,9 +122,13 @@ func commandMapb(config *config) error {
 	return nil
 }
 
+func commandExplore( config *config,location string) {
+	fullURL := config.baseURL+location
+}
 
 
-func commandHelp(config *config) error {
+
+func commandHelp(config *config,location string) error {
 	fmt.Print("\nWelcome to the Pokedex!\n")
 	fmt.Print("Usage:\n\n\n")
 	for _, command := range commands{
@@ -120,7 +137,7 @@ func commandHelp(config *config) error {
 	return nil
 }
 
-func commandExit(config *config) error {
+func commandExit(config *config, location string) error {
 	fmt.Print("Closing the Pokedex... Goodbye!\n")
 	os.Exit(0)
 	return nil
@@ -140,6 +157,11 @@ func main() {
 			name: "mapb",
 			description: "Displays last 20 locations",
 			callback: commandMapb,
+		},
+		"explore": {
+			name: "explore",
+			description: "Displays pokemon in location",
+			callback: commandExplore,
 		},
 		"help": {
 			name: "help",
