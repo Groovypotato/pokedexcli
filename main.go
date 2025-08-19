@@ -119,7 +119,7 @@ func commandMapb(config *config, location string) error {
 		fmt.Println(location.Name)
 	}
 	
-	return nil
+	return ni
 }
 
 func commandExplore( config *config,location string) {
