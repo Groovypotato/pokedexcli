@@ -14,7 +14,7 @@ import (
 type cliCommand struct {
 	name string
 	description string
-	callback func(*config, string) error
+	callback func(*config,  ...string) error
 }
 
 type config struct {
@@ -56,10 +56,10 @@ func cleanInput(text string) []string {
     return words
 }
 
-func commandMap(config *config, location string) error {
-	getURL := config.baseURL
-	if config.nextUrl != "" {
-		getURL = config.nextUrl
+func commandMap(cfg *config , args ...string) error {
+	getURL := cfg.baseURL
+	if cfg.nextUrl != "" {
+		getURL = cfg.nextUrl
 	}
 	res, err := http.Get(getURL)
 	if err != nil {
@@ -79,8 +79,8 @@ func commandMap(config *config, location string) error {
 		return err
 	}
 
-	config.nextUrl = locationAreas.Next
-	config.prevUrl = locationAreas.Previous
+	cfg.nextUrl = locationAreas.Next
+	cfg.prevUrl = locationAreas.Previous
 
 	for _, location := range locationAreas.Results {
 		fmt.Println(location.Name)
@@ -89,12 +89,12 @@ func commandMap(config *config, location string) error {
 	return nil
 }
 
-func commandMapb(config *config, location string) error {
-	if config.prevUrl == ""{
+func commandMapb(cfg *config, args ...string) error {
+	if cfg.prevUrl == ""{
 		return errors.New("you're on the first page")
 	}
 
-	res, err := http.Get(config.prevUrl)
+	res, err := http.Get(cfg.prevUrl)
 	if err != nil {
 		return err
 	}
@@ -102,33 +102,62 @@ func commandMapb(config *config, location string) error {
 	if res.StatusCode > 299 {
 		return fmt.Errorf("the call to location-area did not succeed: %v", res.StatusCode)
 	}
-	var locationresponse LocationAreas
+	var locationareas LocationAreas
 	jsonData, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
-	jsonErr := json.Unmarshal(jsonData,&locationresponse)
+	jsonErr := json.Unmarshal(jsonData,&locationareas)
 	if jsonErr != nil {
 		return err
 	}
 
-	config.nextUrl = locationresponse.Next
-	config.prevUrl = locationresponse.Previous
+	cfg.nextUrl = locationareas.Next
+	cfg.prevUrl = locationareas.Previous
 
-	for _, location := range locationresponse.Results {
+	for _, location := range locationareas.Results {
 		fmt.Println(location.Name)
 	}
 	
-	return ni
+	return nil
 }
 
-func commandExplore( config *config,location string) {
-	fullURL := config.baseURL+location
+func commandExplore( cfg *config, args ...string) error {
+	 if len(args) == 0 {
+        return errors.New("no location area provided")
+    }
+    area := args[0]
+    fullURL := cfg.baseURL+area
+    res, err := http.Get(fullURL)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode > 299 {
+		return fmt.Errorf("the call to location-area did not succeed: %v", res.StatusCode)
+	}
+	var locationarea LocationArea
+	jsonData, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	jsonErr := json.Unmarshal(jsonData,&locationarea)
+	if jsonErr != nil {
+		return err
+	}
+
+
+	for _, location := range locationarea.PokemonEncounters {
+		fmt.Println(location.Pokemon.Name)
+	}
+	
+	return nil
 }
 
 
 
-func commandHelp(config *config,location string) error {
+
+func commandHelp(cfg *config, args ...string) error {
 	fmt.Print("\nWelcome to the Pokedex!\n")
 	fmt.Print("Usage:\n\n\n")
 	for _, command := range commands{
@@ -137,7 +166,7 @@ func commandHelp(config *config,location string) error {
 	return nil
 }
 
-func commandExit(config *config, location string) error {
+func commandExit(cfg *config, args ...string) error {
 	fmt.Print("Closing the Pokedex... Goodbye!\n")
 	os.Exit(0)
 	return nil
@@ -174,20 +203,21 @@ func main() {
 			callback: commandExit,
 		},
 	}
-	var currentConfig config 
-	currentConfig.baseURL = "https://pokeapi.co/api/v2/location-area/"
+	var currentCfg config 
+	currentCfg.baseURL = "https://pokeapi.co/api/v2/location-area/"
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
 		userInput := cleanInput(scanner.Text())
-		value, found := commands[userInput[0]]
-		if found {
-			err := value.callback(&currentConfig)
-			if err != nil {
-				fmt.Printf("Callback has failed: %v",err)
+		cmdName := userInput[0]
+		if cmdFunc, ok := commands[cmdName]; ok {
+			args := userInput[1:]
+			err := cmdFunc.callback(&currentCfg,args...)
+			if err != nil{
+				fmt.Print(err)
 			}
-		} else {
+			} else {
 			fmt.Print("Unknown command\n")
 		}
 	}
