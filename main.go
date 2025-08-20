@@ -6,9 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 type cliCommand struct {
@@ -18,7 +20,8 @@ type cliCommand struct {
 }
 
 type config struct {
-	baseURL string
+	locationURL string
+	pokemonURL string
 	nextUrl string
 	prevUrl string
 }
@@ -46,9 +49,11 @@ type PokemonEncounter struct {
 type Pokemon struct {
 	Name string `json:"name"`
 	URL string `json:"url"`
+	BaseExperience int `json:"base_experience"`
 }
 
 var commands map[string]cliCommand
+var myPokedex map[string]Pokemon
 
 func cleanInput(text string) []string {
 	lWords := strings.ToLower(text)
@@ -57,7 +62,7 @@ func cleanInput(text string) []string {
 }
 
 func commandMap(cfg *config , args ...string) error {
-	getURL := cfg.baseURL
+	getURL := cfg.locationURL
 	if cfg.nextUrl != "" {
 		getURL = cfg.nextUrl
 	}
@@ -127,7 +132,7 @@ func commandExplore( cfg *config, args ...string) error {
         return errors.New("no location area provided")
     }
     area := args[0]
-    fullURL := cfg.baseURL+area
+    fullURL := cfg.locationURL+area
     res, err := http.Get(fullURL)
 	if err != nil {
 		return err
@@ -154,7 +159,41 @@ func commandExplore( cfg *config, args ...string) error {
 	return nil
 }
 
+func commandCatch(cfg *config, args ...string) error {
+	if len(args) == 0 {
+        return errors.New("no location area provided")
+    }
+    pokemonToCatch := args[0]
+	fullURL := cfg.pokemonURL+pokemonToCatch
+	fmt.Printf("Throwing a Pokeball at %s...\n",pokemonToCatch)
 
+	res, err := http.Get(fullURL)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	if res.StatusCode > 299 {
+		return fmt.Errorf("the call to pokemon did not succeed: %v", res.StatusCode)
+	}
+	var pokemon Pokemon
+	jsonData, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	jsonErr := json.Unmarshal(jsonData,&pokemon)
+	if jsonErr != nil {
+		return err
+	}
+	rand.NewSource(time.Now().UnixNano())
+	chance := float64(rand.Intn(pokemon.BaseExperience))
+	if chance > float64(pokemon.BaseExperience)*0.4 {
+		fmt.Printf("%s was caught!\n",pokemon.Name)
+		myPokedex[pokemon.Name] = pokemon
+	}else {
+		fmt.Printf("%s escaped!\n",pokemon.Name)
+	}
+	return nil
+}
 
 
 func commandHelp(cfg *config, args ...string) error {
@@ -192,6 +231,11 @@ func main() {
 			description: "Displays pokemon in location",
 			callback: commandExplore,
 		},
+		"catch": {
+			name: "catch",
+			description: "Attempts to catch a pokemon",
+			callback: commandCatch,
+		},
 		"help": {
 			name: "help",
 			description: "Displays a help message",
@@ -204,7 +248,9 @@ func main() {
 		},
 	}
 	var currentCfg config 
-	currentCfg.baseURL = "https://pokeapi.co/api/v2/location-area/"
+	myPokedex = make(map[string]Pokemon)
+	currentCfg.locationURL = "https://pokeapi.co/api/v2/location-area/"
+	currentCfg.pokemonURL = "https://pokeapi.co/api/v2/pokemon/"
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		fmt.Print("Pokedex > ")
