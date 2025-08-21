@@ -50,7 +50,30 @@ type Pokemon struct {
 	Name string `json:"name"`
 	URL string `json:"url"`
 	BaseExperience int `json:"base_experience"`
+	Height int `json:"height"`
+	Weight int `json:"weight"`
+	Stats []PokemonStat `json:"stats"`
+	Types []PokemonType `json:"types"`
 }
+
+type PokemonStat struct {
+	Stat Stat `json:"stat"`
+	BaseStat int `json:"base_stat"`
+}
+
+type Stat struct {
+	Id int `json:"id"`
+	Name string `json:"name"`
+}
+
+type PokemonType struct {
+	Type PType `json:"type"`
+}
+
+type PType struct {
+	Name string `json:"name"`
+}
+
 
 var commands map[string]cliCommand
 var myPokedex map[string]Pokemon
@@ -194,6 +217,28 @@ func commandCatch(cfg *config, args ...string) error {
 	}
 	return nil
 }
+
+func comandInspect(cfg *config, args ...string) error {
+	pInspect := args[0]
+	pFound, ok := myPokedex[pInspect]
+	if !ok {
+		fmt.Printf("You have not caught %s to inspect. Go out there and get one Poke Master!\n", pInspect)
+	} else {
+		fmt.Printf("Name: %s\n",pFound.Name)
+		fmt.Printf("Height: %v\n", pFound.Height)
+		fmt.Printf("Weight: %v\n", pFound.Weight)
+		fmt.Println("Stats:")
+		for _, stat := range pFound.Stats {
+			fmt.Printf("     -%s: %v\n",stat.Stat.Name,stat.BaseStat)
+		}
+		fmt.Println("Types:")
+		for _,pktype := range pFound.Types {
+			fmt.Printf("     - %s",pktype.Type.Name)
+		}
+	}
+	return nil
+}
+
 
 
 func commandHelp(cfg *config, args ...string) error {
