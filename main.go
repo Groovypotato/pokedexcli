@@ -196,7 +196,7 @@ func commandCatch(cfg *config, args ...string) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return fmt.Errorf("the call to pokemon did not succeed: %v", res.StatusCode)
+		return fmt.Errorf("the call to pokemon did not succeed: %v\n", res.StatusCode)
 	}
 	var pokemon Pokemon
 	jsonData, err := io.ReadAll(res.Body)
@@ -229,11 +229,11 @@ func comandInspect(cfg *config, args ...string) error {
 		fmt.Printf("Weight: %v\n", pFound.Weight)
 		fmt.Println("Stats:")
 		for _, stat := range pFound.Stats {
-			fmt.Printf("     -%s: %v\n",stat.Stat.Name,stat.BaseStat)
+			fmt.Printf("  -%s: %v\n",stat.Stat.Name,stat.BaseStat)
 		}
 		fmt.Println("Types:")
 		for _,pktype := range pFound.Types {
-			fmt.Printf("     - %s",pktype.Type.Name)
+			fmt.Printf("  - %s\n",pktype.Type.Name)
 		}
 	}
 	return nil
@@ -281,6 +281,11 @@ func main() {
 			description: "Attempts to catch a pokemon",
 			callback: commandCatch,
 		},
+		"inspect": {
+			name: "inpect",
+			description: "Attempts to catch a pokemon",
+			callback: comandInspect,
+		},
 		"help": {
 			name: "help",
 			description: "Displays a help message",
@@ -298,7 +303,7 @@ func main() {
 	currentCfg.pokemonURL = "https://pokeapi.co/api/v2/pokemon/"
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Print("Pokedex > ")
+		fmt.Print("\nPokedex > ")
 		scanner.Scan()
 		userInput := cleanInput(scanner.Text())
 		cmdName := userInput[0]
