@@ -196,7 +196,7 @@ func commandCatch(cfg *config, args ...string) error {
 	}
 	defer res.Body.Close()
 	if res.StatusCode > 299 {
-		return fmt.Errorf("the call to pokemon did not succeed: %v\n", res.StatusCode)
+		fmt.Printf("the call to pokemon did not succeed: %v\n", res.StatusCode)
 	}
 	var pokemon Pokemon
 	jsonData, err := io.ReadAll(res.Body)
@@ -239,7 +239,17 @@ func comandInspect(cfg *config, args ...string) error {
 	return nil
 }
 
-
+func commandPokedex(cfg *config, args ...string) error {
+	if len(myPokedex) < 1 {
+		fmt.Printf("Your pokedex is empty. Go fill it!")
+	} else{
+		for _, pokemon := range myPokedex {
+			fmt.Println("Your Pokedex:")
+			fmt.Printf(" - %s", pokemon.Name)
+		}
+	}
+	return nil
+}
 
 func commandHelp(cfg *config, args ...string) error {
 	fmt.Print("\nWelcome to the Pokedex!\n")
@@ -283,8 +293,13 @@ func main() {
 		},
 		"inspect": {
 			name: "inpect",
-			description: "Attempts to catch a pokemon",
+			description: "Take a look at the stats of a caught pokemon",
 			callback: comandInspect,
+		},
+		"pokedex": {
+			name: "pokedex",
+			description: "Look at all the pokemon you have collected",
+			callback: commandPokedex,
 		},
 		"help": {
 			name: "help",
